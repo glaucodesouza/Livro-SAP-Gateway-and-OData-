@@ -1,0 +1,25 @@
+METHOD productset_get_entityset.
+
+  DATA: ls_headerdata TYPE bapi_epm_product_header,
+        lt_headerdata TYPE STANDARD TABLE OF bapi_epm_product_header,
+        ls_product    LIKE LINE OF et_entityset.
+
+  CALL FUNCTION 'BAPI_EPM_PRODUCT_GET_LIST'
+*   EXPORTING
+*     MAX_ROWS                    =
+    TABLES
+      headerdata                  = lt_headerdata
+*     SELPARAMPRODUCTID           =
+*     SELPARAMSUPPLIERNAMES       =
+*     SELPARAMCATEGORIES          =
+*     RETURN                      =
+            .
+
+  LOOP AT lt_headerdata INTO ls_headerdata.
+    ls_product-productid = ls_headerdata-product_id.
+    ls_product-category  = ls_headerdata-category.
+    ls_product-name      = ls_headerdata-name.
+    APPEND ls_product TO et_entityset.
+  ENDLOOP.
+
+ENDMETHOD.

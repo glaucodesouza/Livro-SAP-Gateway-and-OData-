@@ -1,0 +1,66 @@
+METHOD productconvfacto_get_entityset.
+
+  DATA: lv_source_entity_set_name TYPE /iwbep/mgw_tech_name,
+        ls_product                TYPE zcl_zexample1_mpc=>ts_product,
+        ls_product_id             TYPE bapi_epm_product_id,
+        ls_conversion_factors     TYPE bapi_epm_product_conv_factors,
+        lt_conversion_factors     TYPE STANDARD TABLE OF bapi_epm_product_conv_factors,
+        ls_conv_factor            LIKE LINE OF et_entityset,
+        lt_return                 TYPE STANDARD TABLE OF bapiret2.
+
+  lv_source_entity_set_name = io_tech_request_context->get_source_entity_set_name( ).
+
+* Is this a navigation from the ProductSet?
+  IF lv_source_entity_set_name EQ 'ProductSet'.
+    io_tech_request_context->get_converted_source_keys(
+      IMPORTING
+        es_key_values = ls_product ).
+
+    ls_product_id-product_id = ls_product-productid.
+
+    CALL FUNCTION 'BAPI_EPM_PRODUCT_GET_DETAIL'
+      EXPORTING
+        product_id               = ls_product_id
+*     IMPORTING
+*       HEADERDATA               =
+      TABLES
+        conversion_factors       = lt_conversion_factors
+        return                   = lt_return.
+
+    IF lt_return IS NOT INITIAL.
+      mo_context->get_message_container( )->add_messages_from_bapi(
+        it_bapi_messages         = lt_return
+        iv_determine_leading_msg = /iwbep/if_message_container=>gcs_leading_msg_search_option-first ).
+
+      RAISE EXCEPTION TYPE zcx_product_busi_exception.
+    ENDIF.
+
+    LOOP AT lt_conversion_factors INTO ls_conversion_factors.
+      ls_conv_factor-productid   = ls_conversion_factors-product_id.
+      ls_conv_factor-sourceunit  = ls_conversion_factors-source_unit.
+      ls_conv_factor-targetunit  = ls_conversion_factors-target_unit.
+      ls_conv_factor-numerator   = ls_conversion_factors-numerator.
+      ls_conv_factor-denominator = ls_conversion_factors-denominator.
+      APPEND ls_conv_factor TO et_entityset.
+    ENDLOOP.
+
+  ELSE.
+    CALL METHOD super->productconvfacto_get_entityset
+      EXPORTING
+        iv_entity_name           = iv_entity_name
+        iv_entity_set_name       = iv_entity_set_name
+        iv_source_name           = iv_source_name
+        it_filter_select_options = it_filter_select_options
+        is_paging                = is_paging
+        it_key_tab               = it_key_tab
+        it_navigation_path       = it_navigation_path
+        it_order                 = it_order
+        iv_filter_string         = iv_filter_string
+        iv_search_string         = iv_search_string
+        io_tech_request_context  = io_tech_request_context
+      IMPORTING
+        et_entityset             = et_entityset
+        es_response_context      = es_response_context.
+  ENDIF.
+
+ENDMETHOD.

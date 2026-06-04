@@ -1,0 +1,36 @@
+--batch_zmybatch
+Content-Type: multipart/mixed; boundary=changeset_zmychangeset
+
+--changeset_zmychangeset
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+PUT ProductSet('HT-1001') HTTP/1.1
+Content-Type: application/atom+xml
+
+<atom:entry xmlns:atom="http://www.w3.org/2005/Atom">
+<atom:content type="application/xml">
+<m:properties xmlns:m="http://schemas.microsoft.com/ado/2007/08/dataservices/metadata" xmlns:d="http://schemas.microsoft.com/ado/2007/08/dataservices">
+  <d:ProductID>HT-1001</d:ProductID>
+  <d:Category>Notebooks</d:Category>
+  <d:Name>Notebook Basic 42</d:Name>
+  <d:SupplierID>0100000001</d:SupplierID>
+  <d:WeightMeasure>4.500</d:WeightMeasure>
+  <d:WeightUnit>KG</d:WeightUnit>
+  <d:PictureURI>/sap/public/bc/NWDEMO_MODEL/IMAGES/HT-1001.jpg</d:PictureURI>
+  <d:PictureMIMEType>image/jpeg</d:PictureMIMEType>
+</m:properties>
+</atom:content>
+</atom:entry>
+
+--changeset_zmychangeset--
+
+
+--batch_zmybatch
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+GET ProductSet('HT-1001') HTTP/1.1
+
+
+--batch_zmybatch--

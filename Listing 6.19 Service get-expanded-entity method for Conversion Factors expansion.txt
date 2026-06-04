@@ -1,0 +1,112 @@
+METHOD /iwbep/if_mgw_appl_srv_runtime~get_expanded_entity.
+
+* Nested result type
+  DATA: BEGIN OF ls_prod_convfactors.
+          INCLUDE TYPE zcl_zexample1_mpc=>ts_product.
+  DATA: toconvfactors TYPE STANDARD TABLE OF zcl_zexample1_mpc=>ts_productconvfactor WITH DEFAULT KEY,
+        END OF ls_prod_convfactors.
+
+  DATA: ls_product      TYPE zcl_zexample1_mpc=>ts_product,
+        ls_product_id   TYPE bapi_epm_product_id,
+        ls_headerdata   TYPE bapi_epm_product_header,
+        ls_conv_factors TYPE bapi_epm_product_conv_factors,
+        lt_conv_factors TYPE TABLE OF bapi_epm_product_conv_factors,
+        ls_conv_factor  TYPE zcl_zexample1_mpc=>ts_productconvfactor,
+        lt_return       TYPE STANDARD TABLE OF bapiret2.
+
+  DATA: lv_entityset_name              TYPE /iwbep/mgw_tech_name,
+        lv_compare_result_prod_convfac TYPE io_expand->ty_e_compare_result,
+        ls_expanded_clause             LIKE LINE OF et_expanded_tech_clauses.
+
+  DATA: lr_mr_api TYPE REF TO if_mr_api.
+
+  lr_mr_api = cl_mime_repository_api=>if_mr_api~get_api( ).
+
+  lv_entityset_name              = io_tech_request_context->get_entity_set_name( ).
+  lv_compare_result_prod_convfac = io_expand->compare_to_tech_names( 'TOCONVFACTORS' ).
+
+* Expand on Product / Conversion Factors?
+  IF lv_entityset_name EQ 'ProductSet' AND
+    ( lv_compare_result_prod_convfac EQ io_expand->gcs_compare_result-match_subset OR
+      lv_compare_result_prod_convfac EQ io_expand->gcs_compare_result-match_equals ).
+
+    io_tech_request_context->get_converted_keys(
+      IMPORTING
+        es_key_values = ls_product ).
+
+    ls_product_id-product_id = ls_product-productid.
+
+    CALL FUNCTION 'BAPI_EPM_PRODUCT_GET_DETAIL'
+      EXPORTING
+        product_id         = ls_product_id
+      IMPORTING
+        headerdata         = ls_headerdata
+      TABLES
+        conversion_factors = lt_conv_factors
+        return             = lt_return.
+
+    IF lt_return IS NOT INITIAL.
+      mo_context->get_message_container( )->add_messages_from_bapi(
+        it_bapi_messages         = lt_return
+        iv_determine_leading_msg = /iwbep/if_message_container=>gcs_leading_msg_search_option-first ).
+
+      RAISE EXCEPTION TYPE zcx_product_busi_exception.
+    ENDIF.
+
+    ls_prod_convfactors-productid     = ls_headerdata-product_id.
+    ls_prod_convfactors-category      = ls_headerdata-category.
+    ls_prod_convfactors-name          = ls_headerdata-name.
+    ls_prod_convfactors-supplierid    = ls_headerdata-supplier_id.
+    ls_prod_convfactors-weightmeasure = ls_headerdata-weight_measure.
+    ls_prod_convfactors-weightunit    = ls_headerdata-weight_unit.
+    ls_prod_convfactors-pictureuri    = ls_headerdata-product_pic_url.
+
+    IF ls_prod_convfactors-pictureuri IS NOT INITIAL.
+      CALL METHOD lr_mr_api->get
+        EXPORTING
+          i_url              = ls_prod_convfactors-pictureuri
+        IMPORTING
+          e_mime_type        = ls_prod_convfactors-picturemimetype
+        EXCEPTIONS
+          parameter_missing  = 1
+          error_occured      = 2
+          not_found          = 3
+          permission_failure = 4
+          OTHERS             = 5.
+    ENDIF.
+
+    LOOP AT lt_conv_factors INTO ls_conv_factors.
+      ls_conv_factor-productid   = ls_conv_factors-product_id.
+      ls_conv_factor-sourceunit  = ls_conv_factors-source_unit.
+      ls_conv_factor-targetunit  = ls_conv_factors-target_unit.
+      ls_conv_factor-numerator   = ls_conv_factors-numerator.
+      ls_conv_factor-denominator = ls_conv_factors-denominator.
+      APPEND ls_conv_factor TO ls_prod_convfactors-toconvfactors.
+    ENDLOOP.
+
+    copy_data_to_ref(
+      EXPORTING
+        is_data = ls_prod_convfactors
+      CHANGING
+        cr_data = er_entity ).
+
+    ls_expanded_clause = 'TOCONVFACTORS'.
+    APPEND ls_expanded_clause TO et_expanded_tech_clauses.
+
+  ELSE.
+    super->/iwbep/if_mgw_appl_srv_runtime~get_expanded_entity(
+      EXPORTING
+        iv_entity_name            = iv_entity_name
+        iv_entity_set_name        = iv_entity_set_name
+        iv_source_name            = iv_source_name
+        io_expand                 = io_expand
+        it_key_tab                = it_key_tab
+        it_navigation_path        = it_navigation_path
+        io_tech_request_context   = io_tech_request_context
+      IMPORTING
+        er_entity                 = er_entity
+        et_expanded_clauses       = et_expanded_clauses
+        et_expanded_tech_clauses  = et_expanded_tech_clauses ).
+  ENDIF.
+
+ENDMETHOD.

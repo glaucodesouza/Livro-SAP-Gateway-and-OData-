@@ -1,0 +1,79 @@
+METHOD /iwbep/if_mgw_appl_srv_runtime~create_deep_entity.
+
+* Nested input/result type
+  DATA: BEGIN OF ls_prod_convfactors.
+          INCLUDE TYPE zcl_zexample1_mpc=>ts_product.
+  DATA: toconvfactors TYPE STANDARD TABLE OF zcl_zexample1_mpc=>ts_productconvfactor WITH DEFAULT KEY,
+        END OF ls_prod_convfactors.
+
+  DATA: lv_entityset_name TYPE /iwbep/mgw_tech_name,
+        ls_headerdata     TYPE bapi_epm_product_header,
+        ls_conv_factors   TYPE bapi_epm_product_conv_factors,
+        lt_conv_factors   TYPE TABLE OF bapi_epm_product_conv_factors,
+        ls_conv_factor    TYPE zcl_zexample1_mpc=>ts_productconvfactor,
+        lt_return         TYPE TABLE OF bapiret2.
+
+  lv_entityset_name = io_tech_request_context->get_entity_set_name( ).
+
+  CASE lv_entityset_name.
+    WHEN 'ProductSet'.
+      io_data_provider->read_entry_data( IMPORTING es_data = ls_prod_convfactors ).
+
+      ls_headerdata-product_id      = ls_prod_convfactors-productid.
+      ls_headerdata-category        = ls_prod_convfactors-category.
+      ls_headerdata-name            = ls_prod_convfactors-name.
+      ls_headerdata-supplier_id     = ls_prod_convfactors-supplierid.
+      ls_headerdata-measure_unit    = 'EA'.
+      ls_headerdata-currency_code   = 'EUR'.
+      ls_headerdata-tax_tarif_code  = '1'.
+      ls_headerdata-type_code       = 'PR'.
+      ls_headerdata-weight_measure  = ls_prod_convfactors-weightmeasure.
+      ls_headerdata-weight_unit     = ls_prod_convfactors-weightunit.
+      ls_headerdata-product_pic_url = ls_prod_convfactors-pictureuri.
+
+      LOOP AT ls_prod_convfactors-toconvfactors INTO ls_conv_factor.
+        ls_conv_factors-product_id  = ls_conv_factor-productid.
+        ls_conv_factors-source_unit = ls_conv_factor-sourceunit.
+        ls_conv_factors-target_unit = ls_conv_factor-targetunit.
+        ls_conv_factors-numerator   = ls_conv_factor-numerator.
+        ls_conv_factors-denominator = ls_conv_factor-denominator.
+        APPEND ls_conv_factors TO lt_conv_factors.
+      ENDLOOP.
+
+      CALL FUNCTION 'BAPI_EPM_PRODUCT_CREATE'
+        EXPORTING
+          headerdata         = ls_headerdata
+        TABLES
+          conversion_factors = lt_conv_factors
+          return             = lt_return.
+
+      IF lt_return IS NOT INITIAL.
+        mo_context->get_message_container( )->add_messages_from_bapi(
+          it_bapi_messages         = lt_return
+          iv_determine_leading_msg = /iwbep/if_message_container=>gcs_leading_msg_search_option-first ).
+
+        RAISE EXCEPTION TYPE zcx_product_busi_exception.
+      ENDIF.
+
+      copy_data_to_ref(
+        EXPORTING
+          is_data = ls_prod_convfactors
+        CHANGING
+          cr_data = er_deep_entity ).
+
+    WHEN OTHERS.
+      CALL METHOD super->/iwbep/if_mgw_appl_srv_runtime~create_deep_entity
+        EXPORTING
+          iv_entity_name          = iv_entity_name
+          iv_entity_set_name      = iv_entity_set_name
+          iv_source_name          = iv_source_name
+          io_data_provider        = io_data_provider
+          it_key_tab              = it_key_tab
+          it_navigation_path      = it_navigation_path
+          io_expand               = io_expand
+          io_tech_request_context = io_tech_request_context
+        IMPORTING
+          er_deep_entity          = er_deep_entity.
+  ENDCASE.
+
+ENDMETHOD.

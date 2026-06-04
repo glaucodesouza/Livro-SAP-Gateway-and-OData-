@@ -1,0 +1,22 @@
+METHOD supplierset_get_entity.
+
+  DATA: ls_entity     LIKE er_entity,
+        ls_bp_id      TYPE bapi_epm_bp_id,
+        ls_headerdata TYPE bapi_epm_bp_header.
+
+  io_tech_request_context->get_converted_keys(
+    IMPORTING
+      es_key_values = ls_entity ).
+
+  ls_bp_id-bp_id = ls_entity-supplierid.
+
+  CALL FUNCTION 'BAPI_EPM_BP_GET_DETAIL'
+    EXPORTING
+      bp_id      = ls_bp_id
+    IMPORTING
+      headerdata = ls_headerdata.
+
+  er_entity-supplierid   = ls_headerdata-bp_id.
+  er_entity-suppliername = ls_headerdata-company_name.
+
+ENDMETHOD.

@@ -1,0 +1,15 @@
+--batch_zmybatch
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+GET ProductSet('HT-1000') HTTP/1.1
+
+
+--batch_zmybatch
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+GET ProductSet('HT-1001') HTTP/1.1
+
+
+--batch_zmybatch--

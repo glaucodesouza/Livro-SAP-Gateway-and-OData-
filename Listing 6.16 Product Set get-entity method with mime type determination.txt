@@ -1,0 +1,49 @@
+METHOD productset_get_entity.
+
+  DATA: ls_entity     LIKE er_entity,
+        ls_product_id TYPE bapi_epm_product_id,
+        ls_headerdata TYPE bapi_epm_product_header.
+
+  DATA: lr_mr_api TYPE REF TO if_mr_api.
+
+  lr_mr_api = cl_mime_repository_api=>if_mr_api~get_api( ).
+
+  io_tech_request_context->get_converted_keys(
+    IMPORTING
+      es_key_values = ls_entity ).
+
+  ls_product_id-product_id = ls_entity-productid.
+
+  CALL FUNCTION 'BAPI_EPM_PRODUCT_GET_DETAIL'
+    EXPORTING
+      product_id               = ls_product_id
+    IMPORTING
+      headerdata               = ls_headerdata
+*   TABLES
+*     CONVERSION_FACTORS       =
+*     RETURN                   =
+            .
+
+  er_entity-productid     = ls_headerdata-product_id.
+  er_entity-category      = ls_headerdata-category.
+  er_entity-name          = ls_headerdata-name.
+  er_entity-supplierid    = ls_headerdata-supplier_id.
+  er_entity-weightmeasure = ls_headerdata-weight_measure.
+  er_entity-weightunit    = ls_headerdata-weight_unit.
+  er_entity-pictureuri    = ls_headerdata-product_pic_url.
+
+  IF er_entity-pictureuri IS NOT INITIAL.
+    CALL METHOD lr_mr_api->get
+      EXPORTING
+        i_url              = er_entity-pictureuri
+      IMPORTING
+        e_mime_type        = er_entity-picturemimetype
+      EXCEPTIONS
+        parameter_missing  = 1
+        error_occured      = 2
+        not_found          = 3
+        permission_failure = 4
+        OTHERS             = 5.
+  ENDIF.
+
+ENDMETHOD.

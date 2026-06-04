@@ -1,0 +1,68 @@
+METHOD define.
+
+  DATA: lo_ann_target  TYPE REF TO /iwbep/if_mgw_vocan_ann_target.   " Vocabulary Annotation Target
+  DATA: lo_annotation  TYPE REF TO /iwbep/if_mgw_vocan_annotation.   " Vocabulary Annotation
+  DATA: lo_collection  TYPE REF TO /iwbep/if_mgw_vocan_collection.   " Vocabulary Annotation Collection
+  DATA: lo_property    TYPE REF TO /iwbep/if_mgw_vocan_property.     " Vocabulary Annotation Property
+  DATA: lo_record      TYPE REF TO /iwbep/if_mgw_vocan_record.       " Vocabulary Annotation Record
+  DATA: lo_simp_value  TYPE REF TO /iwbep/if_mgw_vocan_simple_val.   " Vocabulary Annotation Simple Value
+  DATA: lo_reference   TYPE REF TO /iwbep/if_mgw_vocan_reference.    " Vocabulary Annotation Reference
+
+  super->define( ).
+
+  lo_reference = vocab_anno_model->create_vocabulary_reference( iv_vocab_id = '/IWBEP/VOC_UI' iv_vocab_version = '0001').
+  lo_reference->create_include( iv_namespace = 'com.sap.vocabularies.UI.v1' iv_alias = 'UI' ).
+
+  " Annotations for entity type Product
+  lo_ann_target = vocab_anno_model->create_annotations_target( 'Product' ).
+  lo_ann_target->set_namespace_qualifier( 'ZEXAMPLE1_SRV' ).
+
+  " Header Info
+  lo_annotation = lo_ann_target->create_annotation( iv_term = 'UI.HeaderInfo' ).
+  lo_record = lo_annotation->create_record( ).
+  lo_property = lo_record->create_property( 'TypeName' ).
+  lo_simp_value = lo_property->create_simple_value( ).
+  lo_simp_value->set_string('My Product').
+  lo_property = lo_record->create_property( 'TypeNamePlural' ).
+  lo_simp_value = lo_property->create_simple_value( ).
+  lo_simp_value->set_string( 'My Products').
+
+  " Columns to be displayed by default
+  lo_annotation = lo_ann_target->create_annotation( iv_term = 'UI.LineItem' ).
+  lo_collection = lo_annotation->create_collection( ).
+
+  lo_record = lo_collection->create_record( iv_record_type = 'UI.DataField' ).
+  lo_property = lo_record->create_property( 'Value' ).
+  lo_simp_value = lo_property->create_simple_value( ).
+  lo_simp_value->set_path( 'ProductID' ).
+
+  lo_record = lo_collection->create_record( iv_record_type = 'UI.DataField' ).
+  lo_property = lo_record->create_property( 'Value' ).
+  lo_simp_value = lo_property->create_simple_value( ).
+  lo_simp_value->set_path( 'Name' ).
+
+  lo_record = lo_collection->create_record( iv_record_type = 'UI.DataField' ).
+  lo_property = lo_record->create_property( 'Value' ).
+  lo_simp_value = lo_property->create_simple_value( ).
+  lo_simp_value->set_path( 'Category' ).
+
+  lo_record = lo_collection->create_record( iv_record_type = 'UI.DataField' ).
+  lo_property = lo_record->create_property( 'Value' ).
+  lo_simp_value = lo_property->create_simple_value( ).
+  lo_simp_value->set_path( 'WeightMeasure' ).
+
+  lo_record = lo_collection->create_record( iv_record_type = 'UI.DataField' ).
+  lo_property = lo_record->create_property( 'Value' ).
+  lo_simp_value = lo_property->create_simple_value( ).
+  lo_simp_value->set_path( 'WeightUnit' ).
+
+  " Filter properties
+  lo_annotation = lo_ann_target->create_annotation( iv_term = 'UI.SelectionFields' ).
+  lo_collection = lo_annotation->create_collection( ).
+
+  lo_simp_value = lo_collection->create_simple_value( ).
+  lo_simp_value->set_property_path( 'ProductID' ).
+  lo_simp_value = lo_collection->create_simple_value( ).
+  lo_simp_value->set_property_path( 'Category' ).
+
+ENDMETHOD.

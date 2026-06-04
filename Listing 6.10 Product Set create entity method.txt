@@ -1,0 +1,36 @@
+METHOD productset_create_entity.
+
+  DATA: ls_headerdata TYPE bapi_epm_product_header,
+        ls_product    LIKE er_entity,
+        lt_return     TYPE STANDARD TABLE OF bapiret2.
+
+  io_data_provider->read_entry_data( IMPORTING es_data = ls_product ).
+
+  ls_headerdata-product_id     = ls_product-productid.
+  ls_headerdata-category       = ls_product-category.
+  ls_headerdata-name           = ls_product-name.
+  ls_headerdata-supplier_id    = ls_product-supplierid.
+  ls_headerdata-measure_unit   = 'EA'.
+  ls_headerdata-currency_code  = 'EUR'.
+  ls_headerdata-tax_tarif_code = '1'.
+  ls_headerdata-type_code      = 'PR'.
+
+  CALL FUNCTION 'BAPI_EPM_PRODUCT_CREATE'
+    EXPORTING
+      headerdata = ls_headerdata
+*     PERSIST_TO_DB      = ABAP_TRUE
+    TABLES
+*     CONVERSION_FACTORS =
+      return     = lt_return.
+
+  IF lt_return IS NOT INITIAL.
+    mo_context->get_message_container( )->add_messages_from_bapi(
+      it_bapi_messages         = lt_return
+      iv_determine_leading_msg = /iwbep/if_message_container=>gcs_leading_msg_search_option-first ).
+
+    RAISE EXCEPTION TYPE zcx_product_busi_exception.
+  ENDIF.
+
+  er_entity = ls_product.
+
+ENDMETHOD.

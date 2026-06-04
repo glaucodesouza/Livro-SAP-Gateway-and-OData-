@@ -1,0 +1,60 @@
+METHOD /iwbep/if_mgw_appl_srv_runtime~get_stream.
+
+  DATA: lv_entityset_name TYPE /iwbep/mgw_tech_name,
+        ls_product        TYPE zcl_zexample1_mpc=>ts_product,
+        lr_mr_api         TYPE REF TO if_mr_api,
+        ls_stream         TYPE ty_s_media_resource.
+
+  lv_entityset_name = io_tech_request_context->get_entity_set_name( ).
+
+  CASE lv_entityset_name.
+    WHEN 'ProductSet'.
+      CALL METHOD productset_get_entity
+        EXPORTING
+          iv_entity_name          = iv_entity_name
+          iv_entity_set_name      = iv_entity_set_name
+          iv_source_name          = iv_source_name
+          it_key_tab              = it_key_tab
+          io_tech_request_context = io_tech_request_context
+          it_navigation_path      = it_navigation_path
+        IMPORTING
+          er_entity               = ls_product.
+
+      IF NOT ls_product-pictureuri IS INITIAL.
+        lr_mr_api = cl_mime_repository_api=>if_mr_api~get_api( ).
+        CALL METHOD lr_mr_api->get
+          EXPORTING
+            i_url              = ls_product-pictureuri
+          IMPORTING
+            e_content          = ls_stream-value
+            e_mime_type        = ls_stream-mime_type
+          EXCEPTIONS
+            parameter_missing  = 1
+            error_occured      = 2
+            not_found          = 3
+            permission_failure = 4
+            OTHERS             = 5.
+
+        copy_data_to_ref(
+          EXPORTING
+            is_data = ls_stream
+          CHANGING
+            cr_data = er_stream ).
+      ENDIF.
+
+    WHEN OTHERS.
+      CALL METHOD super->/iwbep/if_mgw_appl_srv_runtime~get_stream
+        EXPORTING
+          iv_entity_name          = iv_entity_name
+          iv_entity_set_name      = iv_entity_set_name
+          iv_source_name          = iv_source_name
+          it_key_tab              = it_key_tab
+          it_navigation_path      = it_navigation_path
+          io_tech_request_context = io_tech_request_context
+        IMPORTING
+          er_stream               = er_stream
+          es_response_context     = es_response_context.
+
+  ENDCASE.
+
+ENDMETHOD.
